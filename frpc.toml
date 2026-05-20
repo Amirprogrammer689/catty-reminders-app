@@ -1,13 +1,9 @@
 serverAddr = "course.prafdin.ru"
 serverPort = 7000
-auth.method = "token"
-auth.token = "devops"
 
-[[proxies]]
-name = "hook-baimukashev"
-type = "http"
-localPort = 8080
-customDomains = ["webhook.baimukashev.course.prafdin.ru"]
+[auth]
+method = "token"
+token = "devops"
 
 [[proxies]]
 name = "app-baimukashev"

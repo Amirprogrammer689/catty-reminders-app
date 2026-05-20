@@ -1,40 +1,48 @@
 name: CD
-
 on:
   release:
     types: [published]
-
-permissions:
-  contents: read
-  packages: write
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      # Собираем данные и приводим название репозитория к нижнему регистру
-      - name: Get config details
-        run: |
-          echo "IMAGE_LC=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
-          echo "COMMIT_SHA=$(git rev-parse HEAD)" >> $GITHUB_ENV
-
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        # env должен быть строго на уровне шага, а не внутри with
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_ACTOR: ${{ github.actor }}
-          IMAGE: ghcr.io/${{ env.IMAGE_LC }}:${{ env.COMMIT_SHA }}
-          DEPLOY_REF: ${{ env.COMMIT_SHA }}
+        uses: appleboy/ssh-action@v1
         with:
-          host: "course.prafdin.ru"
-          username: "kali"
+          host: course.prafdin.ru
+          port: 3200  # Персональный порт подключения Амира сквозь FRP-туннель
+          username: kali
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 3200
-          envs: GITHUB_TOKEN,GITHUB_ACTOR,IMAGE,DEPLOY_REF
+          command_timeout: 30m
           script: |
-            cd /home/kali/catty-reminders-app
-            bash scripts/deploy.sh
+            set -e
+            cd /home/kali/catty-reminders-app || exit 1
+
+            echo "DEPLOY_REF=${{ github.sha }}" > .env
+            echo "${{ secrets.GITHUB_TOKEN }}" | sudo docker login ghcr.io -u amirprogrammer689 --password-stdin
+
+            # Останавливаем и удаляем старые контейнеры стека оркестрации
+            sudo docker compose down || true
+
+            # На всякий случай вычищаем одиночные контейнеры, если они занимают порты хоста
+            sudo docker stop catty-reminders-app 2>/dev/null || true
+            sudo docker rm catty-reminders-app 2>/dev/null || true
+            sudo docker stop catty-test 2>/dev/null || true
+            sudo docker rm catty-test 2>/dev/null || true
+
+            # Поднимаем новый чистый мультиконтейнерный стек через Compose
+            sudo docker compose up -d --remove-orphans
+
+            # Цикл Health Check для подтверждения успешного старта веб-компонента
+            for i in $(seq 1 30); do
+              if curl -fsS http://127.0.0.1:8181/login >/dev/null; then
+                echo "App is healthy"
+                exit 0
+              fi
+              echo "Waiting for app... ($i/30)"
+              sleep 5
+            done
+
+            echo "App failed to start"
+            sudo docker compose logs app
+            exit 1
