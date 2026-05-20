@@ -10,7 +10,7 @@ jobs:
         uses: appleboy/ssh-action@v1
         with:
           host: course.prafdin.ru
-          port: 3200  # Персональный порт подключения Амира сквозь FRP-туннель
+          port: 3200
           username: kali
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 30m
@@ -19,21 +19,17 @@ jobs:
             cd /home/kali/catty-reminders-app || exit 1
 
             echo "DEPLOY_REF=${{ github.sha }}" > .env
+
             echo "${{ secrets.GITHUB_TOKEN }}" | sudo docker login ghcr.io -u amirprogrammer689 --password-stdin
 
-            # Останавливаем и удаляем старые контейнеры стека оркестрации
             sudo docker compose down || true
-
-            # На всякий случай вычищаем одиночные контейнеры, если они занимают порты хоста
             sudo docker stop catty-reminders-app 2>/dev/null || true
             sudo docker rm catty-reminders-app 2>/dev/null || true
             sudo docker stop catty-test 2>/dev/null || true
             sudo docker rm catty-test 2>/dev/null || true
 
-            # Поднимаем новый чистый мультиконтейнерный стек через Compose
+            sudo docker compose pull app || true
             sudo docker compose up -d --remove-orphans
-
-            # Цикл Health Check для подтверждения успешного старта веб-компонента
             for i in $(seq 1 30); do
               if curl -fsS http://127.0.0.1:8181/login >/dev/null; then
                 echo "App is healthy"
@@ -42,7 +38,4 @@ jobs:
               echo "Waiting for app... ($i/30)"
               sleep 5
             done
-
-            echo "App failed to start"
-            sudo docker compose logs app
             exit 1
