@@ -14,3 +14,9 @@ name = "app-baimukashev"
 type = "http"
 localPort = 8181
 customDomains = ["app.baimukashev.course.prafdin.ru"]
+
+[[proxies]]
+name = "ssh-baimukashev"
+type = "tcp"
+localPort = 22
+remotePort = 3200
