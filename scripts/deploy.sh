@@ -1,23 +1,26 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
-BRANCH=$1
-SHA=$2
-PROJECT_DIR="/home/kali/catty-reminders-app"
+APP_DIR="/home/kali/catty-reminders-app"
+echo "Deploying via Docker into '$APP_DIR'"
+cd "$APP_DIR"
 
-echo "=== СТАРТ CD ДЕПЛОЯ ДЛЯ ВЕТКИ $BRANCH (SHA: $SHA) ==="
+# Авторизация в реестре через переданный токен
+echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
 
-cd $PROJECT_DIR
+echo "Pulling Docker image: $IMAGE"
+docker pull "$IMAGE"
 
-git fetch origin
-git checkout -f $BRANCH
-git reset --hard origin/$BRANCH
+echo "Stopping old container..."
+docker stop catty-test || true
+docker rm catty-test || true
 
-echo "[1/2] Очистка портов..."
-fuser -k -9 8181/tcp || true
-pkill -9 -f uvicorn || true
-sleep 3
+echo "Starting new Docker container..."
+docker run -d \
+  -p 8181:8181 \
+  --name catty-test \
+  --restart unless-stopped \
+  -e DEPLOY_REF="$DEPLOY_REF" \
+  "$IMAGE"
 
-echo "[2/2] Запуск сервера uvicorn..."
-DEPLOY_REF=$SHA ./venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8181 > server_runtime.log 2>&1 &
-
-echo "=== ДЕПЛОЙ УСПЕШНО ЗАВЕРШЕН ==="
+echo "Docker deployment completed successfully!"
