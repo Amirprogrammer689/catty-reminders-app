@@ -1,0 +1,20 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environments
+venv/
+.venv/
+env/
+.env
+
+# Logs
+*.log
+
+# IDEs
+.vscode/
+.idea/
+
+frcp.ini
