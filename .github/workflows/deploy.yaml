@@ -1,19 +1,40 @@
-name: CD Deploy
+name: CD
+
 on:
   release:
     types: [published]
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # Собираем данные и приводим название репозитория к нижнему регистру
+      - name: Get config details
+        run: |
+          echo "IMAGE_LC=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          echo "COMMIT_SHA=$(git rev-parse HEAD)" >> $GITHUB_ENV
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
+        # env должен быть строго на уровне шага, а не внутри with
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          IMAGE: ghcr.io/${{ env.IMAGE_LC }}:${{ env.COMMIT_SHA }}
+          DEPLOY_REF: ${{ env.COMMIT_SHA }}
         with:
-          host: course.prafdin.ru
-          username: kali
+          host: "course.prafdin.ru"
+          username: "kali"
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 3200
+          envs: GITHUB_TOKEN,GITHUB_ACTOR,IMAGE,DEPLOY_REF
           script: |
-            cd ~/catty-reminders-app
-            ./scripts/deploy.sh lab2 ${{ github.sha }}
+            cd /home/kali/catty-reminders-app
+            bash scripts/deploy.sh
