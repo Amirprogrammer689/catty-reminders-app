@@ -6,37 +6,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
+      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          # Включаем встроенное кэширование pip пакетов
           cache: 'pip'
-
+          
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # --prefer-binary берет готовые сборки, --no-cache-dir здесь не нужен, так как работает кэш гитхаба
           pip install -r requirements.txt --prefer-binary
-
-      # Кэшируем бинарники Playwright (Chromium), чтобы не скачивать их заново
-      - name: Cache Playwright Browsers
-        id: playwright-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('**/requirements.txt') }}
-
-      - name: Install Playwright Browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: python -m playwright install chromium --with-deps
-
-      # Если кэш сработал, системные зависимости (библиотеки ОС) для браузера всё равно могут быть нужны
-      - name: Install Playwright System Dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: python -m playwright install-deps chromium
-
+          python -m playwright install chromium --with-deps
+          
       - name: Start application & Health Check
         run: |
           export PYTHONPATH=$PYTHONPATH:$(pwd)
@@ -47,12 +29,12 @@ jobs:
           done
           echo "Application failed to start!"
           exit 1
-
+          
       - name: Run tests
         run: |
           export PYTHONPATH=$PYTHONPATH:$(pwd)
           python -m pytest -v --browser chromium --junitxml=test_result.xml tests
-
+          
       - name: Upload test report
         if: always()
         uses: actions/upload-artifact@v4

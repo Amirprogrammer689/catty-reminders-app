@@ -25,6 +25,6 @@ fi
 .venv/bin/python -m pip install --upgrade pip
 .venv/bin/python -m pip install -r requirements.txt --prefer-binary --no-cache-dir
 
-# Перезапуск сервиса через systemd
+# Перезапуск
 sudo systemctl restart "$APP_SERVICE"
 echo "Deployment completed!"
