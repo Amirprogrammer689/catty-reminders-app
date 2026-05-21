@@ -7,13 +7,11 @@ services:
         condition: service_healthy
     ports:
       - "8181:8181"
-    env_file:
-      - .env
     environment:
       - MYSQL_HOST=db
-      - MYSQL_USER=catty
-      - MYSQL_PASSWORD=cattypass
-      - MYSQL_DATABASE=catty_reminders
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
     volumes:
       - ./config.json:/catty-reminders-app/config.json:ro
     networks:
@@ -23,12 +21,12 @@ services:
     image: mysql:8.0
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: rootpass
-      MYSQL_USER: catty
-      MYSQL_PASSWORD: cattypass
-      MYSQL_DATABASE: catty_reminders
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -ucatty -pcattypass"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u${MYSQL_USER} -p${MYSQL_PASSWORD}"]
       interval: 5s
       timeout: 5s
       retries: 10
