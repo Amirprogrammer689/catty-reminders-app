@@ -19,31 +19,19 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # --prefer-binary мгновенно ставит готовые пакеты без сборки из исходников
           pip install -r requirements.txt --prefer-binary --no-cache-dir
           python -m playwright install chromium --with-deps
 
-      - name: Deploy & Restart via systemd (Local Simulation / SSH)
+      - name: Start application & Health Check
         run: |
-          # Копируем созданный unit-файл в системную директорию systemd
-          sudo cp catty.service /etc/systemd/system/catty.service
-
-          # Перезагружаем конфигурацию демона, чтобы он увидел новый сервис
-          sudo systemctl daemon-reload
-
-          # Включаем автозапуск и перезапускаем приложение
-          sudo systemctl enable catty.service
-          sudo systemctl restart catty.service
-
-      - name: Health Check
-        run: |
-          # Контрольное ожидание запуска сервиса
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+          # Запускаем локально в раннере для проверки тестов
+          python -m uvicorn app.main:app --host 127.0.0.1 --port 8181 &
           for i in {1..30}; do
             curl --fail --silent http://127.0.0.1:8181/login >/dev/null && exit 0
             sleep 1
           done
-          echo "Application failed to start via systemd!"
-          sudo systemctl status catty.service
+          echo "Application failed to start!"
           exit 1
 
       - name: Run tests
@@ -57,3 +45,4 @@ jobs:
         with:
           name: test_result
           path: test_result.xml
+
