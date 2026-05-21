@@ -1,13 +1,30 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
-cd /home/kali/catty-reminders-app
+BRANCH="${1:-lab2}"
+REQUESTED_SHA="${2:-}"
+APP_DIR="/home/kali/catty-reminders-app"
+APP_SERVICE="catty-app.service"
 
-echo "[1/2] Обновляем зависимости приложения..."
-source .venv/bin/activate
-pip install -r requirements.txt --prefer-binary --no-cache-dir
+echo "Deploying branch '$BRANCH' into '$APP_DIR'"
 
-echo "[2/2] Перезапускаем службу приложения через systemd..."
-sudo systemctl restart catty.service
+cd "$APP_DIR"
+git fetch origin
+git checkout -B "$BRANCH" "origin/$BRANCH"
 
-echo "Деплой успешно завершен!"
+if [[ -n "$REQUESTED_SHA" ]]; then
+    git reset --hard "$REQUESTED_SHA"
+    echo "DEPLOY_REF=$REQUESTED_SHA" > .env
+fi
+
+# Проверка venv
+if [[ ! -d ".venv" ]]; then
+    python3 -m venv .venv
+fi
+
+.venv/bin/python -m pip install --upgrade pip
+.venv/bin/python -m pip install -r requirements.txt --prefer-binary --no-cache-dir
+
+# Перезапуск сервиса через systemd
+sudo systemctl restart "$APP_SERVICE"
+echo "Deployment completed!"

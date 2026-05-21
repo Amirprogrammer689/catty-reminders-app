@@ -1,5 +1,4 @@
-name: CD
-
+name: CD Deploy
 on:
   release:
     types: [published]
@@ -9,14 +8,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: course.prafdin.ru
-          port: 3200
           username: kali
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 30m
+          port: 3200
           script: |
-            # Просто запускаем наш скрипт деплоя на стороне Kali Linux
-            chmod +x /home/kali/catty-reminders-app/scripts/deploy.sh
-            /home/kali/catty-reminders-app/scripts/deploy.sh
+            cd ~/catty-reminders-app
+            chmod +x ./scripts/deploy.sh
+            ./scripts/deploy.sh lab2 ${{ github.sha }}
