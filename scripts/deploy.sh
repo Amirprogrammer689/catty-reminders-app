@@ -1,23 +1,13 @@
 #!/bin/bash
+set -e
 
-BRANCH=$1
-SHA=$2
-PROJECT_DIR="/home/kali/catty-reminders-app"
+cd /home/kali/catty-reminders-app
 
-echo "=== СТАРТ CD ДЕПЛОЯ ДЛЯ ВЕТКИ $BRANCH (SHA: $SHA) ==="
+echo "[1/2] Обновляем зависимости приложения..."
+source .venv/bin/activate
+pip install -r requirements.txt --prefer-binary --no-cache-dir
 
-cd $PROJECT_DIR
+echo "[2/2] Перезапускаем службу приложения через systemd..."
+sudo systemctl restart catty.service
 
-git fetch origin
-git checkout -f $BRANCH
-git reset --hard origin/$BRANCH
-
-echo "[1/2] Очистка портов..."
-fuser -k -9 8181/tcp || true
-pkill -9 -f uvicorn || true
-sleep 3
-
-echo "[2/2] Запуск сервера uvicorn..."
-DEPLOY_REF=$SHA ./venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8181 > server_runtime.log 2>&1 &
-
-echo "=== ДЕПЛОЙ УСПЕШНО ЗАВЕРШЕН ==="
+echo "Деплой успешно завершен!"
