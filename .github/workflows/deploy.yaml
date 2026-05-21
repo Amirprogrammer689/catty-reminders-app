@@ -1,7 +1,9 @@
 name: CD
+
 on:
   release:
     types: [published]
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -18,17 +20,17 @@ jobs:
             set -e
             cd /home/kali/catty-reminders-app || exit 1
 
-            # Авторизация в реестре пакетов пакетов 
-            echo "${{ secrets.GITHUB_TOKEN }}" | sudo docker login ghcr.io -u amirprogrammer689 --password-stdin
+            # Авторизация в реестре пакетов GitHub Container Registry (GHCR)
+            echo "${{ secrets.GITHUB_TOKEN }}" | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            # Насильно скачиваем обновленный Docker-образ
-            sudo docker compose pull app || true
+            # Загрузка обновленного Docker-образа приложения
+            sudo env DEPLOY_REF=${{ github.sha }} docker compose pull app || true
 
-            # Очищаем старый стек и поднимаем новый чистый мультиконтейнерный слой
-            sudo docker compose down || true
-            sudo docker compose up -d --remove-orphans
+            # Остановка старого и запуск нового мультиконтейнерного стека
+            sudo env DEPLOY_REF=${{ github.sha }} docker compose down || true
+            sudo env DEPLOY_REF=${{ github.sha }} docker compose up -d --remove-orphans
 
-            # Контрольный цикл проверки доступности веб-сервиса
+            # Цикл проверки доступности веб-сервиса (Health Check)
             for i in $(seq 1 30); do
               if curl -fsS http://127.0.0.1:8181/login >/dev/null; then
                 echo "App is healthy"
