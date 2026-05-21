@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - '**'
+  pull_request:
+    branches:
+      - '**'
 
 jobs:
   test:
@@ -25,13 +28,12 @@ jobs:
       - name: Start application & Health Check
         run: |
           export PYTHONPATH=$PYTHONPATH:$(pwd)
-          # Запускаем локально в раннере для проверки тестов
           python -m uvicorn app.main:app --host 127.0.0.1 --port 8181 &
           for i in {1..30}; do
             curl --fail --silent http://127.0.0.1:8181/login >/dev/null && exit 0
             sleep 1
           done
-          echo "Application failed to start!"
+          echo "Application failed to start inside runner!"
           exit 1
 
       - name: Run tests
@@ -45,4 +47,3 @@ jobs:
         with:
           name: test_result
           path: test_result.xml
-
