@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/amirprogrammer689/catty-reminders-app:${DEPLOY_REF:-latest}
+    image: ghcr.io/amirprogrammer689/catty-reminders-app:${IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
       db:
@@ -19,7 +19,7 @@ services:
 
   db:
     image: mysql:8.0
-    restart: always
+    restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_USER: ${MYSQL_USER}

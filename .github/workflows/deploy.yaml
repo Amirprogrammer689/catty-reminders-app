@@ -7,6 +7,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
@@ -20,17 +23,19 @@ jobs:
             set -e
             cd /home/kali/catty-reminders-app || exit 1
 
-            # Авторизация в реестре пакетов GitHub Container Registry (GHCR)
+            # Авторизация в GHCR
             echo "${{ secrets.GITHUB_TOKEN }}" | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            # Загрузка обновленного Docker-образа приложения
-            sudo env DEPLOY_REF=${{ github.sha }} docker compose pull app || true
+            # Загрузка образа по тегу SHA текущего коммита
+            echo "IMAGE_TAG=${{ github.sha }}" > .env.release
 
-            # Остановка старого и запуск нового мультиконтейнерного стека
-            sudo env DEPLOY_REF=${{ github.sha }} docker compose down || true
-            sudo env DEPLOY_REF=${{ github.sha }} docker compose up -d --remove-orphans
+            sudo docker compose pull app || true
 
-            # Цикл проверки доступности веб-сервиса (Health Check)
+            # Чистый перезапуск стека без лишних прокидываний DEPLOY_REF в env хоста
+            sudo docker compose down --remove-orphans || true
+            sudo docker compose up -d
+
+            # Хелсчек доступности
             for i in $(seq 1 30); do
               if curl -fsS http://127.0.0.1:8181/login >/dev/null; then
                 echo "App is healthy"
