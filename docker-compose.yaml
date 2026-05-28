@@ -1,6 +1,9 @@
 services:
   app:
-    image: ghcr.io/amirprogrammer689/catty-reminders-app:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      args:
+        - DEPLOY_REF=${IMAGE_TAG:-unknown}
     restart: unless-stopped
     depends_on:
       db:
@@ -9,9 +12,9 @@ services:
       - "8181:8181"
     environment:
       - MYSQL_HOST=db
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=catty
+      - MYSQL_PASSWORD=cattypass
+      - MYSQL_DATABASE=catty_reminders
     volumes:
       - ./config.json:/catty-reminders-app/config.json:ro
     networks:
@@ -21,12 +24,12 @@ services:
     image: mysql:8.0
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_USER: catty
+      MYSQL_PASSWORD: cattypass
+      MYSQL_DATABASE: catty_reminders
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u${MYSQL_USER} -p${MYSQL_PASSWORD}"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -ucatty -pcattypass"]
       interval: 5s
       timeout: 5s
       retries: 10

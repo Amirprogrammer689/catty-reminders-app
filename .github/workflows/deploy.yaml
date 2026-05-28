@@ -7,9 +7,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
@@ -23,19 +20,19 @@ jobs:
             set -e
             cd /home/kali/catty-reminders-app || exit 1
 
-            # Авторизация в GHCR
-            echo "${{ secrets.GITHUB_TOKEN }}" | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            # Обновляем локальный исходный код прямо на сервере
+            git fetch origin
+            git checkout lab4 || true
+            git pull origin lab4 || true
 
-            # Загрузка образа по тегу SHA текущего коммита
-            echo "IMAGE_TAG=${{ github.sha }}" > .env.release
+            # Записываем хэш коммита в локальный файл .env для сборки compose
+            echo "IMAGE_TAG=${{ github.sha }}" > .env
 
-            sudo docker compose pull app || true
-
-            # Чистый перезапуск стека без лишних прокидываний DEPLOY_REF в env хоста
+            # Чистый перезапуск стека с автоматической сборкой
             sudo docker compose down --remove-orphans || true
-            sudo docker compose up -d
+            sudo docker compose up -d --build
 
-            # Хелсчек доступности
+            # Цикл проверки доступности (Health Check)
             for i in $(seq 1 30); do
               if curl -fsS http://127.0.0.1:8181/login >/dev/null; then
                 echo "App is healthy"
